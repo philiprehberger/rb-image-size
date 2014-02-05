@@ -1,0 +1,26 @@
+AllCops:
+  TargetRubyVersion: 3.1
+  NewCops: enable
+  SuggestExtensions: false
+
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  EnforcedStyle: always
+
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*"
+    - "*.gemspec"
+
+Metrics/ModuleLength:
+  Exclude:
+    - "lib/philiprehberger/image_size/detector.rb"
+
+Metrics/ClassLength:
+  Exclude:
+    - "lib/philiprehberger/image_size/detector.rb"
+
+Layout/LineLength:
+  Max: 120
