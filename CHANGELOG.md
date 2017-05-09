@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-28
+
+### Added
+
+- TIFF format support with little-endian and big-endian byte order detection
+- ICO/CUR format support with 256px dimension handling
+- SVG dimension detection from width/height attributes and viewBox
+- AVIF format support via ISOBMFF ftyp/ispe box parsing
+- EXIF orientation detection for JPEG with automatic dimension swapping for rotated images
+- Animation detection for GIF (NETSCAPE2.0), WebP (VP8X ANIM flag), and APNG (acTL chunk)
+- Alpha channel detection for PNG (color type), WebP (VP8L alpha bit, VP8X alpha flag), and GIF (GCE transparency)
+- `ImageInfo#animated?` method for animation detection
+- `ImageInfo#alpha?` method for alpha channel detection
+- `ImageInfo#orientation` attribute for EXIF orientation (1-8)
+
 ## [0.1.1] - 2026-03-26
 
 ### Added
