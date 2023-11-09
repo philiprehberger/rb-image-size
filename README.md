@@ -4,7 +4,7 @@
 [![Gem Version](https://badge.fury.io/rb/philiprehberger-image_size.svg)](https://rubygems.org/gems/philiprehberger-image_size)
 [![Last updated](https://img.shields.io/github/last-commit/philiprehberger/rb-image-size)](https://github.com/philiprehberger/rb-image-size/commits/main)
 
-Image dimension detection from file headers without full decode.
+Image dimension detection from file headers without full decode
 
 ## Requirements
 
@@ -89,6 +89,18 @@ info.to_a  # => [640, 480]
 info.to_h  # => { width: 640, height: 480, format: :bmp, animated: false, alpha: false, orientation: nil }
 ```
 
+### Computed Properties
+
+```ruby
+info = Philiprehberger::ImageSize.of("photo.png")
+info.aspect_ratio  # => 1.78
+info.landscape?    # => true
+info.portrait?     # => false
+info.square?       # => false
+info.area          # => 2073600
+info.rotated?      # => false
+```
+
 ## API
 
 ### `Philiprehberger::ImageSize`
@@ -109,6 +121,12 @@ info.to_h  # => { width: 640, height: 480, format: :bmp, animated: false, alpha:
 | `#animated?` | Whether the image is animated (GIF, WebP, APNG) |
 | `#alpha?` | Whether the image has an alpha channel |
 | `#orientation` | EXIF orientation (1-8), nil if not applicable |
+| `#aspect_ratio` | Width divided by height as Float |
+| `#landscape?` | Whether width > height |
+| `#portrait?` | Whether height > width |
+| `#square?` | Whether width == height |
+| `#area` | Total pixel count (width * height) |
+| `#rotated?` | Whether EXIF orientation indicates 90/270 rotation |
 | `#to_a` | Returns `[width, height]` |
 | `#to_h` | Returns hash with all attributes |
 | `#to_s` | Returns `"FORMAT WxH"` string |

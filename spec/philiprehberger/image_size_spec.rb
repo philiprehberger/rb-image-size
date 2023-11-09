@@ -863,6 +863,99 @@ RSpec.describe Philiprehberger::ImageSize do
     end
   end
 
+  describe 'ImageInfo computed properties' do
+    describe '#aspect_ratio' do
+      it 'returns width divided by height' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 1920, height: 1080, format: :png)
+        expect(info.aspect_ratio).to be_within(0.01).of(1.78)
+      end
+
+      it 'returns 1.0 for square images' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 100, height: 100, format: :png)
+        expect(info.aspect_ratio).to eq(1.0)
+      end
+
+      it 'returns 0.0 when height is zero' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 100, height: 0, format: :png)
+        expect(info.aspect_ratio).to eq(0.0)
+      end
+    end
+
+    describe '#landscape?' do
+      it 'returns true when width > height' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 200, height: 100, format: :png)
+        expect(info.landscape?).to be true
+      end
+
+      it 'returns false when height > width' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 100, height: 200, format: :png)
+        expect(info.landscape?).to be false
+      end
+
+      it 'returns false when equal' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 100, height: 100, format: :png)
+        expect(info.landscape?).to be false
+      end
+    end
+
+    describe '#portrait?' do
+      it 'returns true when height > width' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 100, height: 200, format: :png)
+        expect(info.portrait?).to be true
+      end
+
+      it 'returns false when width > height' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 200, height: 100, format: :png)
+        expect(info.portrait?).to be false
+      end
+    end
+
+    describe '#square?' do
+      it 'returns true when width equals height' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 100, height: 100, format: :png)
+        expect(info.square?).to be true
+      end
+
+      it 'returns false when dimensions differ' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 100, height: 200, format: :png)
+        expect(info.square?).to be false
+      end
+    end
+
+    describe '#area' do
+      it 'returns width times height' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 1920, height: 1080, format: :png)
+        expect(info.area).to eq(2_073_600)
+      end
+
+      it 'returns 0 when a dimension is zero' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 0, height: 100, format: :png)
+        expect(info.area).to eq(0)
+      end
+    end
+
+    describe '#rotated?' do
+      it 'returns true for orientation 5-8' do
+        [5, 6, 7, 8].each do |orient|
+          info = Philiprehberger::ImageSize::ImageInfo.new(width: 100, height: 200, format: :jpeg, orientation: orient)
+          expect(info.rotated?).to be true
+        end
+      end
+
+      it 'returns false for orientation 1-4' do
+        [1, 2, 3, 4].each do |orient|
+          info = Philiprehberger::ImageSize::ImageInfo.new(width: 100, height: 200, format: :jpeg, orientation: orient)
+          expect(info.rotated?).to be false
+        end
+      end
+
+      it 'returns false when orientation is nil' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 100, height: 200, format: :png)
+        expect(info.rotated?).to be false
+      end
+    end
+  end
+
   # Helper methods for building test binary data
 
   def build_exif_with_orientation(orientation_value)

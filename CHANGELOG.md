@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-01
+
+### Added
+- `ImageInfo#aspect_ratio` for width/height ratio as Float
+- `ImageInfo#landscape?`, `#portrait?`, `#square?` orientation predicates
+- `ImageInfo#area` for total pixel count
+- `ImageInfo#rotated?` to detect EXIF 90/270 degree rotation
+
+### Fixed
+- Remove trailing period from README one-liner description
+
 ## [0.2.2] - 2026-03-31
 
 ### Added
