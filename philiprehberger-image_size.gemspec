@@ -8,7 +8,8 @@ Gem::Specification.new do |spec|
   spec.authors = ['Philip Rehberger']
   spec.email = ['me@philiprehberger.com']
   spec.summary = 'Image dimension detection from file headers without full decode'
-  spec.description = 'Reads width, height, and format from image file headers (PNG, JPEG, GIF, BMP, WebP) ' \
+  spec.description = 'Reads width, height, format, DPI, and color depth from image file headers ' \
+                     '(PNG, JPEG, GIF, BMP, WebP, TIFF, ICO, SVG, AVIF) ' \
                      'without loading the full image. Zero dependencies, fast, and memory-efficient.'
   spec.homepage = 'https://philiprehberger.com/open-source-packages/ruby/philiprehberger-image_size'
   spec.license = 'MIT'
