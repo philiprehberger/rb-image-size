@@ -32,7 +32,7 @@ module Philiprehberger
     # Detect image format
     #
     # @param path_or_io [String, Pathname, IO, StringIO] file path or IO-like object
-    # @return [Symbol] format symbol (:png, :jpeg, :gif, :bmp, :webp)
+    # @return [Symbol] format symbol (:png, :jpeg, :gif, :bmp, :webp, :tiff, :ico, :cur, :svg, :avif)
     # @raise [Error] if the file cannot be read or format is unrecognized
     def self.format(path_or_io)
       of(path_or_io).format
