@@ -1,6 +1,8 @@
 # philiprehberger-image_size
 
-[![Tests](https://github.com/philiprehberger/rb-image-size/actions/workflows/ci.yml/badge.svg)](https://github.com/philiprehberger/rb-image-size/actions/workflows/ci.yml) [![Gem Version](https://img.shields.io/gem/v/philiprehberger-image_size)](https://rubygems.org/gems/philiprehberger-image_size) [![GitHub release](https://img.shields.io/github/v/release/philiprehberger/rb-image-size)](https://github.com/philiprehberger/rb-image-size/releases) [![GitHub last commit](https://img.shields.io/github/last-commit/philiprehberger/rb-image-size)](https://github.com/philiprehberger/rb-image-size/commits/main) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Bug Reports](https://img.shields.io/badge/bug-reports-red.svg)](https://github.com/philiprehberger/rb-image-size/issues) [![Feature Requests](https://img.shields.io/badge/feature-requests-blue.svg)](https://github.com/philiprehberger/rb-image-size/issues) [![GitHub Sponsors](https://img.shields.io/badge/sponsor-philiprehberger-ea4aaa.svg?logo=github)](https://github.com/sponsors/philiprehberger)
+[![Tests](https://github.com/philiprehberger/rb-image-size/actions/workflows/ci.yml/badge.svg)](https://github.com/philiprehberger/rb-image-size/actions/workflows/ci.yml)
+[![Gem Version](https://badge.fury.io/rb/philiprehberger-image_size.svg)](https://rubygems.org/gems/philiprehberger-image_size)
+[![Last updated](https://img.shields.io/github/last-commit/philiprehberger/rb-image-size)](https://github.com/philiprehberger/rb-image-size/commits/main)
 
 Image dimension detection from file headers without full decode.
 
@@ -121,7 +123,21 @@ bundle exec rubocop
 
 ## Support
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Philip%20Rehberger-blue?logo=linkedin)](https://linkedin.com/in/philiprehberger) [![More Packages](https://img.shields.io/badge/more-packages-blue.svg)](https://github.com/philiprehberger?tab=repositories)
+If you find this project useful:
+
+⭐ [Star the repo](https://github.com/philiprehberger/rb-image-size)
+
+🐛 [Report issues](https://github.com/philiprehberger/rb-image-size/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
+
+💡 [Suggest features](https://github.com/philiprehberger/rb-image-size/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement)
+
+❤️ [Sponsor development](https://github.com/sponsors/philiprehberger)
+
+🌐 [All Open Source Projects](https://philiprehberger.com/open-source-packages)
+
+💻 [GitHub Profile](https://github.com/philiprehberger)
+
+🔗 [LinkedIn Profile](https://www.linkedin.com/in/philiprehberger)
 
 ## License
 
