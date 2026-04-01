@@ -44,6 +44,50 @@ module Philiprehberger
         @alpha == true
       end
 
+      # Calculate aspect ratio (width / height)
+      #
+      # @return [Float]
+      def aspect_ratio
+        return 0.0 if height.zero?
+
+        width.to_f / height
+      end
+
+      # Whether the image is wider than tall
+      #
+      # @return [Boolean]
+      def landscape?
+        width > height
+      end
+
+      # Whether the image is taller than wide
+      #
+      # @return [Boolean]
+      def portrait?
+        height > width
+      end
+
+      # Whether the image has equal width and height
+      #
+      # @return [Boolean]
+      def square?
+        width == height
+      end
+
+      # Total pixel area
+      #
+      # @return [Integer]
+      def area
+        width * height
+      end
+
+      # Whether EXIF orientation indicates 90/270 degree rotation
+      #
+      # @return [Boolean]
+      def rotated?
+        orientation ? orientation.between?(5, 8) : false
+      end
+
       # Return dimensions as an array
       #
       # @return [Array<Integer>] [width, height]
