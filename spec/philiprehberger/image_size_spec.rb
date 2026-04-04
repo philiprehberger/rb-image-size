@@ -798,7 +798,10 @@ RSpec.describe Philiprehberger::ImageSize do
                                   format: :png,
                                   animated: false,
                                   alpha: false,
-                                  orientation: nil
+                                  orientation: nil,
+                                  dpi: nil,
+                                  color_depth: nil,
+                                  megapixels: 0.5
                                 })
       end
     end
@@ -956,6 +959,187 @@ RSpec.describe Philiprehberger::ImageSize do
     end
   end
 
+  describe 'ImageInfo#megapixels' do
+    it 'returns megapixels rounded to 1 decimal place' do
+      info = Philiprehberger::ImageSize::ImageInfo.new(width: 1920, height: 1080, format: :png)
+      expect(info.megapixels).to eq(2.1)
+    end
+
+    it 'returns 0.0 for very small images' do
+      info = Philiprehberger::ImageSize::ImageInfo.new(width: 10, height: 10, format: :png)
+      expect(info.megapixels).to eq(0.0)
+    end
+
+    it 'returns correct value for large images' do
+      info = Philiprehberger::ImageSize::ImageInfo.new(width: 4000, height: 3000, format: :jpeg)
+      expect(info.megapixels).to eq(12.0)
+    end
+  end
+
+  describe 'ImageInfo#color_depth' do
+    it 'returns nil by default' do
+      info = Philiprehberger::ImageSize::ImageInfo.new(width: 100, height: 100, format: :jpeg)
+      expect(info.color_depth).to be_nil
+    end
+
+    it 'returns value when set' do
+      info = Philiprehberger::ImageSize::ImageInfo.new(width: 100, height: 100, format: :png, color_depth: 32)
+      expect(info.color_depth).to eq(32)
+    end
+
+    it 'detects 24-bit color depth for RGB PNG' do
+      png = build_png_ihdr(128, 64, bit_depth: 8, color_type: 2) # RGB
+      io = StringIO.new(png)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.color_depth).to eq(24) # 8 bits * 3 channels
+    end
+
+    it 'detects 32-bit color depth for RGBA PNG' do
+      png = build_png_ihdr(128, 64, bit_depth: 8, color_type: 6) # RGBA
+      io = StringIO.new(png)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.color_depth).to eq(32) # 8 bits * 4 channels
+    end
+
+    it 'detects 8-bit color depth for greyscale PNG' do
+      png = build_png_ihdr(16, 16, bit_depth: 8, color_type: 0) # greyscale
+      io = StringIO.new(png)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.color_depth).to eq(8) # 8 bits * 1 channel
+    end
+
+    it 'detects 16-bit color depth for greyscale+alpha PNG' do
+      png = build_png_ihdr(16, 16, bit_depth: 8, color_type: 4) # greyscale+alpha
+      io = StringIO.new(png)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.color_depth).to eq(16) # 8 bits * 2 channels
+    end
+
+    it 'detects color depth from BMP header' do
+      bmp = build_bmp(640, 480, bits_per_pixel: 24)
+      io = StringIO.new(bmp)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.color_depth).to eq(24)
+    end
+
+    it 'detects 32-bit BMP color depth' do
+      bmp = build_bmp(640, 480, bits_per_pixel: 32)
+      io = StringIO.new(bmp)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.color_depth).to eq(32)
+    end
+  end
+
+  describe 'ImageInfo#dpi' do
+    it 'returns nil by default' do
+      info = Philiprehberger::ImageSize::ImageInfo.new(width: 100, height: 100, format: :png)
+      expect(info.dpi).to be_nil
+    end
+
+    it 'returns nil for JPEG without JFIF APP0' do
+      jpeg = [
+        0xFF, 0xD8,
+        0xFF, 0xC0, 0x00, 0x0B, 0x08,
+        0x01, 0x90, 0x00, 0xC8,
+        0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x01
+      ].pack('C*')
+      io = StringIO.new(jpeg)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.dpi).to be_nil
+    end
+
+    it 'extracts DPI from JPEG JFIF APP0 with dots per inch' do
+      jpeg = build_jpeg_with_jfif(256, 512, x_density: 72, y_density: 72, units: 1)
+      io = StringIO.new(jpeg)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.dpi).to eq({ x: 72.0, y: 72.0 })
+    end
+
+    it 'extracts DPI from JPEG JFIF APP0 with dots per centimeter' do
+      jpeg = build_jpeg_with_jfif(256, 512, x_density: 28, y_density: 28, units: 2)
+      io = StringIO.new(jpeg)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.dpi).to eq({ x: 71.12, y: 71.12 })
+    end
+
+    it 'returns nil for JPEG JFIF with no unit (aspect ratio only)' do
+      jpeg = build_jpeg_with_jfif(256, 512, x_density: 1, y_density: 1, units: 0)
+      io = StringIO.new(jpeg)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.dpi).to be_nil
+    end
+
+    it 'extracts DPI from PNG pHYs chunk' do
+      png = build_png_with_phys(128, 64, ppu_x: 3780, ppu_y: 3780) # ~96 DPI
+      io = StringIO.new(png)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.dpi).to eq({ x: 96.01, y: 96.01 })
+    end
+
+    it 'returns nil for PNG without pHYs chunk' do
+      png = build_png_ihdr(128, 64, bit_depth: 8, color_type: 2)
+      io = StringIO.new(png)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.dpi).to be_nil
+    end
+
+    it 'extracts DPI from BMP pixels per meter' do
+      bmp = build_bmp(640, 480, bits_per_pixel: 24, ppm_x: 2835, ppm_y: 2835) # ~72 DPI
+      io = StringIO.new(bmp)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.dpi).to eq({ x: 72.01, y: 72.01 })
+    end
+
+    it 'returns nil for BMP without DPI' do
+      bmp = build_bmp(640, 480, bits_per_pixel: 24, ppm_x: 0, ppm_y: 0)
+      io = StringIO.new(bmp)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.dpi).to be_nil
+    end
+  end
+
+  describe 'SVG viewBox edge cases' do
+    it 'parses viewBox with floating-point dimensions' do
+      svg = '<svg viewBox="0 0 100.5 200.7" xmlns="http://www.w3.org/2000/svg"></svg>'
+      io = StringIO.new(svg)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.width).to eq(100)
+      expect(info.height).to eq(200)
+      expect(info.format).to eq(:svg)
+    end
+
+    it 'parses viewBox with negative min-x and min-y' do
+      svg = '<svg viewBox="-10 -20 500 400" xmlns="http://www.w3.org/2000/svg"></svg>'
+      io = StringIO.new(svg)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.width).to eq(500)
+      expect(info.height).to eq(400)
+    end
+
+    it 'parses viewBox with mixed comma and space separators' do
+      svg = '<svg viewBox="0, 0 300, 200" xmlns="http://www.w3.org/2000/svg"></svg>'
+      io = StringIO.new(svg)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.width).to eq(300)
+      expect(info.height).to eq(200)
+    end
+
+    it 'falls back to viewBox when only width is present' do
+      svg = '<svg width="100" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg"></svg>'
+      io = StringIO.new(svg)
+      info = Philiprehberger::ImageSize.of(io)
+      # Falls back because height is missing
+      expect(info.width).to eq(600)
+      expect(info.height).to eq(400)
+    end
+
+    it 'returns nil for SVG without dimensions or viewBox' do
+      svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100"/></svg>'
+      io = StringIO.new(svg)
+      expect { Philiprehberger::ImageSize.of(io) }.to raise_error(Philiprehberger::ImageSize::Error)
+    end
+  end
+
   # Helper methods for building test binary data
 
   def build_exif_with_orientation(orientation_value)
@@ -1040,5 +1224,86 @@ RSpec.describe Philiprehberger::ImageSize do
     meta = "#{[8 + meta_content.length].pack('N')}meta#{meta_content}"
 
     ftyp + meta
+  end
+
+  def build_png_ihdr(width, height, bit_depth: 8, color_type: 2)
+    png = [
+      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, # PNG signature
+      0x00, 0x00, 0x00, 0x0D # IHDR chunk length (13)
+    ].pack('C*')
+    png += 'IHDR'
+    png += [width].pack('N')
+    png += [height].pack('N')
+    png += [bit_depth, color_type, 0, 0, 0].pack('C5') # bit depth, color type, compression, filter, interlace
+    png += [0].pack('N') # CRC placeholder
+    # Add IDAT chunk to stop scanning
+    png += "#{[0].pack('N')}IDAT#{[0].pack('N')}"
+    png
+  end
+
+  def build_png_with_phys(width, height, ppu_x:, ppu_y:, bit_depth: 8, color_type: 2)
+    png = [
+      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+      0x00, 0x00, 0x00, 0x0D
+    ].pack('C*')
+    png += 'IHDR'
+    png += [width].pack('N')
+    png += [height].pack('N')
+    png += [bit_depth, color_type, 0, 0, 0].pack('C5')
+    png += [0].pack('N') # CRC
+
+    # pHYs chunk: 9 bytes data (4 X ppu + 4 Y ppu + 1 unit)
+    phys_data = [ppu_x].pack('N') + [ppu_y].pack('N') + [1].pack('C') # unit=1 (meter)
+    png += [9].pack('N') # chunk length
+    png += 'pHYs'
+    png += phys_data
+    png += [0].pack('N') # CRC
+
+    # IDAT to stop scanning
+    png += "#{[0].pack('N')}IDAT#{[0].pack('N')}"
+    png
+  end
+
+  def build_jpeg_with_jfif(width, height, x_density:, y_density:, units:)
+    # JFIF APP0 data
+    jfif = "JFIF\x00"          # identifier
+    jfif += [1, 1].pack('CC')  # version 1.1
+    jfif += [units].pack('C')  # units
+    jfif += [x_density].pack('n')
+    jfif += [y_density].pack('n')
+    jfif += [0, 0].pack('CC')  # thumbnail dimensions
+
+    app0_length = jfif.length + 2
+
+    jpeg = [0xFF, 0xD8].pack('C*')       # SOI
+    jpeg += [0xFF, 0xE0].pack('C*')      # APP0 marker
+    jpeg += [app0_length].pack('n')      # APP0 length
+    jpeg += jfif
+    jpeg += [0xFF, 0xC0].pack('C*')      # SOF0
+    jpeg += [0x00, 0x0B].pack('C*')      # length
+    jpeg += [0x08].pack('C')             # precision
+    jpeg += [height].pack('n')
+    jpeg += [width].pack('n')
+    jpeg += [0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x01].pack('C*')
+    jpeg
+  end
+
+  def build_bmp(width, height, bits_per_pixel: 24, ppm_x: 0, ppm_y: 0)
+    bmp = 'BM'
+    bmp += [0].pack('V')          # file size (not important for detection)
+    bmp += [0].pack('V')          # reserved
+    bmp += [54].pack('V')         # data offset
+    bmp += [40].pack('V')         # DIB header size
+    bmp += [width].pack('V')
+    bmp += [height].pack('l<')
+    bmp += [1].pack('v')          # planes
+    bmp += [bits_per_pixel].pack('v')
+    bmp += [0].pack('V')          # compression
+    bmp += [0].pack('V')          # image size
+    bmp += [ppm_x].pack('V')     # X pixels per meter
+    bmp += [ppm_y].pack('V')     # Y pixels per meter
+    bmp += [0].pack('V')          # colors used
+    bmp += [0].pack('V')          # important colors
+    bmp
   end
 end

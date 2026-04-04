@@ -10,8 +10,10 @@ module Philiprehberger
     # @attr_reader animated [Boolean, nil] whether the image is animated
     # @attr_reader alpha [Boolean, nil] whether the image has an alpha channel
     # @attr_reader orientation [Integer, nil] EXIF orientation (1-8), nil if not applicable
+    # @attr_reader dpi [Hash, nil] DPI as { x: Float, y: Float }, nil if not available
+    # @attr_reader color_depth [Integer, nil] bits per pixel, nil if not detectable
     class ImageInfo
-      attr_reader :width, :height, :format, :orientation
+      attr_reader :width, :height, :format, :orientation, :dpi, :color_depth
 
       # Create a new ImageInfo
       #
@@ -21,13 +23,17 @@ module Philiprehberger
       # @param animated [Boolean, nil] whether the image is animated
       # @param alpha [Boolean, nil] whether the image has an alpha channel
       # @param orientation [Integer, nil] EXIF orientation (1-8)
-      def initialize(width:, height:, format:, animated: nil, alpha: nil, orientation: nil)
+      # @param dpi [Hash, nil] DPI as { x: Float, y: Float }
+      # @param color_depth [Integer, nil] bits per pixel
+      def initialize(width:, height:, format:, animated: nil, alpha: nil, orientation: nil, dpi: nil, color_depth: nil)
         @width = width
         @height = height
         @format = format
         @animated = animated
         @alpha = alpha
         @orientation = orientation
+        @dpi = dpi
+        @color_depth = color_depth
       end
 
       # Whether the image is animated
@@ -81,6 +87,13 @@ module Philiprehberger
         width * height
       end
 
+      # Megapixels (area / 1,000,000), rounded to 1 decimal place
+      #
+      # @return [Float]
+      def megapixels
+        (area / 1_000_000.0).round(1)
+      end
+
       # Whether EXIF orientation indicates 90/270 degree rotation
       #
       # @return [Boolean]
@@ -97,7 +110,7 @@ module Philiprehberger
 
       # Return image info as a hash
       #
-      # @return [Hash] { width:, height:, format:, animated:, alpha:, orientation: }
+      # @return [Hash] { width:, height:, format:, animated:, alpha:, orientation:, dpi:, color_depth:, megapixels: }
       def to_h
         {
           width: width,
@@ -105,7 +118,10 @@ module Philiprehberger
           format: format,
           animated: animated?,
           alpha: alpha?,
-          orientation: orientation
+          orientation: orientation,
+          dpi: dpi,
+          color_depth: color_depth,
+          megapixels: megapixels
         }
       end
 

@@ -89,6 +89,31 @@ info.to_a  # => [640, 480]
 info.to_h  # => { width: 640, height: 480, format: :bmp, animated: false, alpha: false, orientation: nil }
 ```
 
+### Megapixels
+
+```ruby
+info = Philiprehberger::ImageSize.of("photo.png")
+info.megapixels  # => 2.1
+```
+
+### DPI Extraction
+
+```ruby
+info = Philiprehberger::ImageSize.of("print-ready.jpg")
+info.dpi  # => { x: 300.0, y: 300.0 } or nil if not available
+```
+
+Supported sources: JPEG (JFIF APP0), PNG (pHYs chunk), TIFF (resolution tags), BMP (pixels per meter).
+
+### Color Depth
+
+```ruby
+info = Philiprehberger::ImageSize.of("photo.png")
+info.color_depth  # => 24 (bits per pixel) or nil if not detectable
+```
+
+Supported formats: PNG (bit depth * channels), BMP (from header).
+
 ### Computed Properties
 
 ```ruby
@@ -98,6 +123,7 @@ info.landscape?    # => true
 info.portrait?     # => false
 info.square?       # => false
 info.area          # => 2073600
+info.megapixels    # => 2.1
 info.rotated?      # => false
 ```
 
@@ -126,6 +152,9 @@ info.rotated?      # => false
 | `#portrait?` | Whether height > width |
 | `#square?` | Whether width == height |
 | `#area` | Total pixel count (width * height) |
+| `#megapixels` | Area in megapixels, rounded to 1 decimal |
+| `#dpi` | DPI as `{ x: Float, y: Float }` hash, or nil |
+| `#color_depth` | Bits per pixel (PNG, BMP), or nil |
 | `#rotated?` | Whether EXIF orientation indicates 90/270 rotation |
 | `#to_a` | Returns `[width, height]` |
 | `#to_h` | Returns hash with all attributes |

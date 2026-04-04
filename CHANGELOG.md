@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-03
+
+### Added
+- `ImageInfo#dpi` returns `{ x: Float, y: Float }` hash with DPI values (JPEG JFIF APP0, PNG pHYs, TIFF resolution tags, BMP pixels per meter)
+- `ImageInfo#megapixels` returns `(width * height) / 1_000_000.0` rounded to 1 decimal place
+- `ImageInfo#color_depth` returns bits per pixel where detectable (PNG bit_depth * channels, BMP from header)
+- DPI and color_depth included in `ImageInfo#to_h` output
+
 ## [0.3.0] - 2026-04-01
 
 ### Added

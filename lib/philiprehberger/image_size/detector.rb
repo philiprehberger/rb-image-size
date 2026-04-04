@@ -38,42 +38,89 @@ module Philiprehberger
         # PNG: 8-byte signature followed by IHDR chunk containing width and height
         # Animation: check for acTL chunk after IHDR
         # Alpha: color type byte (offset 25): types 4 (greyscale+alpha) and 6 (RGBA)
+        # Color depth: bit_depth * channels (derived from color type)
+        # DPI: from pHYs chunk if unit is meters
         def detect_png(io, header)
           return nil unless header.start_with?(PNG_SIGNATURE)
           return nil if header.length < 29
 
           width = header[16, 4].unpack1('N')
           height = header[20, 4].unpack1('N')
+          bit_depth = header[24].ord
           color_type = header[25].ord
 
           alpha = [4, 6].include?(color_type)
-          animated = png_animated?(io)
+          channels = png_channels(color_type)
+          color_depth = bit_depth * channels
 
-          ImageInfo.new(width: width, height: height, format: :png, animated: animated, alpha: alpha)
+          animated, dpi = png_scan_chunks(io)
+
+          ImageInfo.new(width: width, height: height, format: :png, animated: animated, alpha: alpha,
+                        color_depth: color_depth, dpi: dpi)
         end
 
-        # Check for APNG acTL chunk by scanning chunks after IHDR
-        def png_animated?(io)
+        # Return number of channels for a PNG color type
+        def png_channels(color_type)
+          case color_type
+          when 0 then 1 # greyscale
+          when 2 then 3 # RGB
+          when 3 then 1 # indexed (palette)
+          when 4 then 2 # greyscale + alpha
+          when 6 then 4 # RGBA
+          else 1
+          end
+        end
+
+        # Scan PNG chunks after IHDR for acTL (animation) and pHYs (DPI)
+        # Returns [animated, dpi]
+        def png_scan_chunks(io)
+          animated = false
+          dpi = nil
+
           io.seek(8) # skip PNG signature
           loop do
             chunk_header = io.read(8)
-            return false if chunk_header.nil? || chunk_header.length < 8
+            break if chunk_header.nil? || chunk_header.length < 8
 
             chunk_length = chunk_header[0, 4].unpack1('N')
             chunk_type = chunk_header[4, 4]
 
-            return true if chunk_type == 'acTL'
-            return false if chunk_type == 'IDAT'
-
-            # skip chunk data + 4-byte CRC
-            io.seek(chunk_length + 4, IO::SEEK_CUR)
+            case chunk_type
+            when 'acTL'
+              animated = true
+              io.seek(chunk_length + 4, IO::SEEK_CUR)
+            when 'pHYs'
+              dpi = parse_png_phys(io, chunk_length)
+            when 'IDAT'
+              break
+            else
+              io.seek(chunk_length + 4, IO::SEEK_CUR)
+            end
           end
+
+          [animated, dpi]
         rescue StandardError
-          false
+          [false, nil]
+        end
+
+        # Parse pHYs chunk: 4-byte X ppu, 4-byte Y ppu, 1-byte unit (1=meter)
+        def parse_png_phys(io, chunk_length)
+          data = io.read(chunk_length)
+          io.read(4) # CRC
+          return nil if data.nil? || data.length < 9
+
+          ppu_x = data[0, 4].unpack1('N')
+          ppu_y = data[4, 4].unpack1('N')
+          unit = data[8].ord
+
+          # Unit 1 = pixels per meter; convert to DPI (1 inch = 0.0254 m)
+          return nil unless unit == 1 && ppu_x.positive? && ppu_y.positive?
+
+          { x: (ppu_x * 0.0254).round(2), y: (ppu_y * 0.0254).round(2) }
         end
 
         # JPEG: Starts with FF D8, dimensions in SOF0 (FF C0) or SOF2 (FF C2) marker
-        # Also checks for EXIF orientation
+        # Also checks for EXIF orientation and JFIF APP0 DPI
         def detect_jpeg(io, header)
           return nil unless header[0, 2] == JPEG_SIGNATURE
 
@@ -81,10 +128,16 @@ module Philiprehberger
           orientation = nil
           width = nil
           height = nil
+          dpi = nil
 
           loop do
             marker = read_jpeg_marker(io)
             break if marker.nil?
+
+            if marker == 0xFFE0 && dpi.nil?
+              dpi = read_jfif_dpi(io)
+              next
+            end
 
             if marker == 0xFFE1 && orientation.nil?
               orientation = read_exif_orientation(io)
@@ -110,7 +163,35 @@ module Philiprehberger
             width, height = height, width
           end
 
-          ImageInfo.new(width: width, height: height, format: :jpeg, orientation: orientation)
+          ImageInfo.new(width: width, height: height, format: :jpeg, orientation: orientation, dpi: dpi)
+        end
+
+        # Read DPI from JFIF APP0 segment
+        def read_jfif_dpi(io)
+          length_bytes = io.read(2)
+          return nil if length_bytes.nil? || length_bytes.length < 2
+
+          length = length_bytes.unpack1('n')
+          return nil if length < 14
+
+          data = io.read(length - 2)
+          return nil if data.nil? || data.length < 12
+
+          # Check for "JFIF\0" identifier
+          return nil unless data[0, 5] == "JFIF\x00"
+
+          units = data[7].ord
+          x_density = data[8, 2].unpack1('n')
+          y_density = data[10, 2].unpack1('n')
+
+          return nil unless x_density.positive? && y_density.positive?
+
+          case units
+          when 1 # dots per inch
+            { x: x_density.to_f, y: y_density.to_f }
+          when 2 # dots per centimeter -> convert to DPI
+            { x: (x_density * 2.54).round(2), y: (y_density * 2.54).round(2) }
+          end
         end
 
         # Read EXIF orientation from APP1 segment
@@ -295,6 +376,8 @@ module Philiprehberger
         end
 
         # BMP: Starts with "BM", width at bytes 18-21 and height at bytes 22-25 (little-endian, signed)
+        # Color depth at bytes 28-29 (bits per pixel)
+        # DPI from X/Y pixels per meter at bytes 38-45
         def detect_bmp(header)
           return nil unless header.start_with?('BM')
           return nil if header.length < 26
@@ -302,7 +385,18 @@ module Philiprehberger
           width = header[18, 4].unpack1('V')
           height = header[22, 4].unpack1('l<').abs
 
-          ImageInfo.new(width: width, height: height, format: :bmp)
+          color_depth = header.length >= 30 ? header[28, 2].unpack1('v') : nil
+
+          dpi = nil
+          if header.length >= 46
+            ppm_x = header[38, 4].unpack1('V')
+            ppm_y = header[42, 4].unpack1('V')
+            if ppm_x.positive? && ppm_y.positive?
+              dpi = { x: (ppm_x * 0.0254).round(2), y: (ppm_y * 0.0254).round(2) }
+            end
+          end
+
+          ImageInfo.new(width: width, height: height, format: :bmp, color_depth: color_depth, dpi: dpi)
         end
 
         # WebP: Starts with "RIFF" + 4 bytes size + "WEBP"
@@ -376,7 +470,8 @@ module Philiprehberger
         end
 
         # TIFF: Starts with "II" (little-endian) or "MM" (big-endian) + magic 42
-        # Read IFD entries for ImageWidth (256) and ImageLength (257) tags
+        # Read IFD entries for ImageWidth (256), ImageLength (257),
+        # XResolution (282), YResolution (283), and ResolutionUnit (296)
         def detect_tiff(io, header)
           return nil if header.length < 8
 
@@ -403,6 +498,9 @@ module Philiprehberger
           entry_count = entry_count_data.unpack1(unpack_16)
           width = nil
           height = nil
+          res_unit = 2 # default: inches
+          x_res_offset = nil
+          y_res_offset = nil
 
           entry_count.times do
             entry = io.read(12)
@@ -420,14 +518,47 @@ module Philiprehberger
             case tag
             when 256 then width = value
             when 257 then height = value
+            when 282 then x_res_offset = entry[8, 4].unpack1(unpack_32) # RATIONAL offset
+            when 283 then y_res_offset = entry[8, 4].unpack1(unpack_32) # RATIONAL offset
+            when 296 then res_unit = value
             end
-
-            break if width && height
           end
 
           return nil if width.nil? || height.nil?
 
-          ImageInfo.new(width: width, height: height, format: :tiff)
+          dpi = tiff_extract_dpi(io, x_res_offset, y_res_offset, res_unit, unpack_32)
+
+          ImageInfo.new(width: width, height: height, format: :tiff, dpi: dpi)
+        end
+
+        # Read TIFF RATIONAL values (numerator/denominator) for DPI
+        def tiff_extract_dpi(io, x_res_offset, y_res_offset, res_unit, unpack_32)
+          return nil if x_res_offset.nil? || y_res_offset.nil?
+
+          x_dpi = tiff_read_rational(io, x_res_offset, unpack_32)
+          y_dpi = tiff_read_rational(io, y_res_offset, unpack_32)
+          return nil if x_dpi.nil? || y_dpi.nil?
+
+          # ResolutionUnit: 2=inches, 3=centimeters
+          case res_unit
+          when 2
+            { x: x_dpi.round(2), y: y_dpi.round(2) }
+          when 3
+            { x: (x_dpi * 2.54).round(2), y: (y_dpi * 2.54).round(2) }
+          end
+        end
+
+        # Read a TIFF RATIONAL (two 32-bit unsigned ints) at an offset
+        def tiff_read_rational(io, offset, unpack_32)
+          io.seek(offset)
+          data = io.read(8)
+          return nil if data.nil? || data.length < 8
+
+          num = data[0, 4].unpack1(unpack_32)
+          den = data[4, 4].unpack1(unpack_32)
+          return nil if den.zero?
+
+          num.to_f / den
         end
 
         # ICO/CUR: 2-byte reserved (0), 2-byte type (1=ICO, 2=CUR), 2-byte count
