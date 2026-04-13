@@ -48,6 +48,7 @@ module Philiprehberger
           height = header[20, 4].unpack1('N')
           bit_depth = header[24].ord
           color_type = header[25].ord
+          interlace = header.length >= 29 ? header[28].ord == 1 : false
 
           alpha = [4, 6].include?(color_type)
           channels = png_channels(color_type)
@@ -56,7 +57,7 @@ module Philiprehberger
           animated, dpi = png_scan_chunks(io)
 
           ImageInfo.new(width: width, height: height, format: :png, animated: animated, alpha: alpha,
-                        color_depth: color_depth, dpi: dpi)
+                        color_depth: color_depth, dpi: dpi, interlaced: interlace)
         end
 
         # Return number of channels for a PNG color type
@@ -129,6 +130,8 @@ module Philiprehberger
           width = nil
           height = nil
           dpi = nil
+          color_depth = nil
+          progressive = false
 
           loop do
             marker = read_jpeg_marker(io)
@@ -145,11 +148,15 @@ module Philiprehberger
             end
 
             if SOF_MARKERS.include?(marker)
-              data = io.read(7)
-              break if data.nil? || data.length < 7
+              progressive = marker == 0xFFC2
+              data = io.read(8)
+              break if data.nil? || data.length < 8
 
+              precision = data[2].ord
               height = data[3, 2].unpack1('n')
               width = data[5, 2].unpack1('n')
+              num_components = data[7].ord
+              color_depth = precision * num_components if precision.positive? && num_components.positive?
               break
             end
 
@@ -163,7 +170,8 @@ module Philiprehberger
             width, height = height, width
           end
 
-          ImageInfo.new(width: width, height: height, format: :jpeg, orientation: orientation, dpi: dpi)
+          ImageInfo.new(width: width, height: height, format: :jpeg, orientation: orientation, dpi: dpi,
+                        color_depth: color_depth, interlaced: progressive)
         end
 
         # Read DPI from JFIF APP0 segment

@@ -70,7 +70,7 @@ Metrics/ModuleLength:
     - "lib/philiprehberger/image_size/detector.rb"
 
 Metrics/ParameterLists:
-  Max: 8
+  Max: 9
 
 Metrics/CollectionLiteralLength:
   Enabled: false

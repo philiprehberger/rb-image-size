@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-04-12
+
+### Added
+- `ImageInfo#interlaced?` detects PNG Adam7 interlacing and JPEG progressive encoding
+- `ImageInfo#color_depth` now returns bits per pixel for JPEG (precision * components from SOF marker)
+- `interlaced` included in `ImageInfo#to_h` output
+
+### Fixed
+- README Usage section structure (first example without subsection header per template guide)
+
 ## [0.4.0] - 2026-04-03
 
 ### Added

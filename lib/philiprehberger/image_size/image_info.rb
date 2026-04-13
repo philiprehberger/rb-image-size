@@ -12,6 +12,7 @@ module Philiprehberger
     # @attr_reader orientation [Integer, nil] EXIF orientation (1-8), nil if not applicable
     # @attr_reader dpi [Hash, nil] DPI as { x: Float, y: Float }, nil if not available
     # @attr_reader color_depth [Integer, nil] bits per pixel, nil if not detectable
+    # @attr_reader interlaced [Boolean, nil] whether the image uses interlaced/progressive encoding
     class ImageInfo
       attr_reader :width, :height, :format, :orientation, :dpi, :color_depth
 
@@ -25,7 +26,9 @@ module Philiprehberger
       # @param orientation [Integer, nil] EXIF orientation (1-8)
       # @param dpi [Hash, nil] DPI as { x: Float, y: Float }
       # @param color_depth [Integer, nil] bits per pixel
-      def initialize(width:, height:, format:, animated: nil, alpha: nil, orientation: nil, dpi: nil, color_depth: nil)
+      # @param interlaced [Boolean, nil] whether the image uses interlaced/progressive encoding
+      def initialize(width:, height:, format:, animated: nil, alpha: nil, orientation: nil, dpi: nil, color_depth: nil,
+                     interlaced: nil)
         @width = width
         @height = height
         @format = format
@@ -34,6 +37,7 @@ module Philiprehberger
         @orientation = orientation
         @dpi = dpi
         @color_depth = color_depth
+        @interlaced = interlaced
       end
 
       # Whether the image is animated
@@ -48,6 +52,13 @@ module Philiprehberger
       # @return [Boolean]
       def alpha?
         @alpha == true
+      end
+
+      # Whether the image uses interlaced/progressive encoding
+      #
+      # @return [Boolean]
+      def interlaced?
+        @interlaced == true
       end
 
       # Calculate aspect ratio (width / height)
@@ -118,6 +129,7 @@ module Philiprehberger
           format: format,
           animated: animated?,
           alpha: alpha?,
+          interlaced: interlaced?,
           orientation: orientation,
           dpi: dpi,
           color_depth: color_depth,
