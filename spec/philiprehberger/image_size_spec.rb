@@ -798,6 +798,7 @@ RSpec.describe Philiprehberger::ImageSize do
                                   format: :png,
                                   animated: false,
                                   alpha: false,
+                                  interlaced: false,
                                   orientation: nil,
                                   dpi: nil,
                                   color_depth: nil,
@@ -825,6 +826,17 @@ RSpec.describe Philiprehberger::ImageSize do
       it 'returns true when alpha present' do
         alpha_info = described_class.new(width: 100, height: 100, format: :png, alpha: true)
         expect(alpha_info.alpha?).to be true
+      end
+    end
+
+    describe '#interlaced?' do
+      it 'returns false by default' do
+        expect(info.interlaced?).to be false
+      end
+
+      it 'returns true when interlaced' do
+        interlaced_info = described_class.new(width: 100, height: 100, format: :png, interlaced: true)
+        expect(interlaced_info.interlaced?).to be true
       end
     end
 
@@ -1028,6 +1040,33 @@ RSpec.describe Philiprehberger::ImageSize do
       info = Philiprehberger::ImageSize.of(io)
       expect(info.color_depth).to eq(32)
     end
+
+    it 'detects 24-bit color depth for JPEG with 3 components' do
+      jpeg = [
+        0xFF, 0xD8,
+        0xFF, 0xC0, 0x00, 0x0B, 0x08,
+        0x01, 0x90, 0x00, 0xC8,
+        0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x01
+      ].pack('C*')
+      io = StringIO.new(jpeg)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.color_depth).to eq(24)
+    end
+
+    it 'detects 8-bit color depth for greyscale JPEG' do
+      jpeg = [
+        0xFF, 0xD8,
+        0xFF, 0xC0,
+        0x00, 0x08,
+        0x08,
+        0x00, 0x40, 0x00, 0x20,
+        0x01,
+        0x01, 0x11, 0x00
+      ].pack('C*')
+      io = StringIO.new(jpeg)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.color_depth).to eq(8)
+    end
   end
 
   describe 'ImageInfo#dpi' do
@@ -1140,6 +1179,48 @@ RSpec.describe Philiprehberger::ImageSize do
     end
   end
 
+  describe 'ImageInfo#interlaced?' do
+    it 'detects Adam7 interlaced PNG' do
+      png = build_png_ihdr(128, 64, bit_depth: 8, color_type: 2, interlace: 1)
+      io = StringIO.new(png)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.interlaced?).to be true
+    end
+
+    it 'reports non-interlaced PNG' do
+      png = build_png_ihdr(128, 64, bit_depth: 8, color_type: 2, interlace: 0)
+      io = StringIO.new(png)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.interlaced?).to be false
+    end
+
+    it 'detects progressive JPEG via SOF2 marker' do
+      jpeg = [
+        0xFF, 0xD8,
+        0xFF, 0xC2,
+        0x00, 0x0B, 0x08,
+        0x01, 0x90, 0x00, 0xC8,
+        0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x01
+      ].pack('C*')
+      io = StringIO.new(jpeg)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.interlaced?).to be true
+    end
+
+    it 'reports baseline JPEG as not interlaced' do
+      jpeg = [
+        0xFF, 0xD8,
+        0xFF, 0xC0,
+        0x00, 0x0B, 0x08,
+        0x01, 0x90, 0x00, 0xC8,
+        0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x01
+      ].pack('C*')
+      io = StringIO.new(jpeg)
+      info = Philiprehberger::ImageSize.of(io)
+      expect(info.interlaced?).to be false
+    end
+  end
+
   # Helper methods for building test binary data
 
   def build_exif_with_orientation(orientation_value)
@@ -1226,7 +1307,7 @@ RSpec.describe Philiprehberger::ImageSize do
     ftyp + meta
   end
 
-  def build_png_ihdr(width, height, bit_depth: 8, color_type: 2)
+  def build_png_ihdr(width, height, bit_depth: 8, color_type: 2, interlace: 0)
     png = [
       0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, # PNG signature
       0x00, 0x00, 0x00, 0x0D # IHDR chunk length (13)
@@ -1234,7 +1315,7 @@ RSpec.describe Philiprehberger::ImageSize do
     png += 'IHDR'
     png += [width].pack('N')
     png += [height].pack('N')
-    png += [bit_depth, color_type, 0, 0, 0].pack('C5') # bit depth, color type, compression, filter, interlace
+    png += [bit_depth, color_type, 0, 0, interlace].pack('C5') # bit depth, color type, compression, filter, interlace
     png += [0].pack('N') # CRC placeholder
     # Add IDAT chunk to stop scanning
     png += "#{[0].pack('N')}IDAT#{[0].pack('N')}"

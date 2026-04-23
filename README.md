@@ -26,8 +26,6 @@ gem install philiprehberger-image_size
 
 ## Usage
 
-### Basic Detection
-
 ```ruby
 require "philiprehberger/image_size"
 
@@ -112,7 +110,17 @@ info = Philiprehberger::ImageSize.of("photo.png")
 info.color_depth  # => 24 (bits per pixel) or nil if not detectable
 ```
 
-Supported formats: PNG (bit depth * channels), BMP (from header).
+Supported formats: PNG (bit depth * channels), BMP (from header), JPEG (precision * components from SOF marker).
+
+### Interlace Detection
+
+```ruby
+info = Philiprehberger::ImageSize.of("progressive.jpg")
+info.interlaced?  # => true (progressive JPEG)
+
+info = Philiprehberger::ImageSize.of("interlaced.png")
+info.interlaced?  # => true (Adam7 interlacing)
+```
 
 ### Computed Properties
 
@@ -146,6 +154,7 @@ info.rotated?      # => false
 | `#format` | Format symbol |
 | `#animated?` | Whether the image is animated (GIF, WebP, APNG) |
 | `#alpha?` | Whether the image has an alpha channel |
+| `#interlaced?` | Whether the image uses interlaced (PNG Adam7) or progressive (JPEG) encoding |
 | `#orientation` | EXIF orientation (1-8), nil if not applicable |
 | `#aspect_ratio` | Width divided by height as Float |
 | `#landscape?` | Whether width > height |
@@ -154,7 +163,7 @@ info.rotated?      # => false
 | `#area` | Total pixel count (width * height) |
 | `#megapixels` | Area in megapixels, rounded to 1 decimal |
 | `#dpi` | DPI as `{ x: Float, y: Float }` hash, or nil |
-| `#color_depth` | Bits per pixel (PNG, BMP), or nil |
+| `#color_depth` | Bits per pixel (PNG, BMP, JPEG), or nil |
 | `#rotated?` | Whether EXIF orientation indicates 90/270 rotation |
 | `#to_a` | Returns `[width, height]` |
 | `#to_h` | Returns hash with all attributes |
