@@ -105,6 +105,20 @@ module Philiprehberger
         (area / 1_000_000.0).round(1)
       end
 
+      # Dimensions scaled to fit inside a bounding box while preserving aspect
+      # ratio. Never upscales — returns the original dimensions when the image
+      # is already smaller than the box.
+      #
+      # @param max_width [Integer] maximum width of the bounding box in pixels
+      # @param max_height [Integer] maximum height of the bounding box in pixels
+      # @return [Array<Integer>] [width, height] scaled to fit
+      def fit_within(max_width, max_height)
+        return [width, height] if width <= max_width && height <= max_height
+
+        scale = [max_width.to_f / width, max_height.to_f / height].min
+        [(width * scale).round, (height * scale).round]
+      end
+
       # Whether EXIF orientation indicates 90/270 degree rotation
       #
       # @return [Boolean]

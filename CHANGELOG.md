@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-04-23
+
+### Added
+- `ImageInfo#fit_within(max_width, max_height)` — returns `[width, height]` scaled to fit inside the given bounding box while preserving aspect ratio. Never upscales; returns the original dimensions when the image is already smaller than the box.
+
 ## [0.5.0] - 2026-04-12
 
 ### Added

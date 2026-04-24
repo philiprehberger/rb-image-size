@@ -969,6 +969,38 @@ RSpec.describe Philiprehberger::ImageSize do
         expect(info.rotated?).to be false
       end
     end
+
+    describe '#fit_within' do
+      it 'scales a landscape image down to fit the box' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 1920, height: 1080, format: :jpeg)
+        expect(info.fit_within(400, 400)).to eq([400, 225])
+      end
+
+      it 'scales a portrait image down to fit the box' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 1080, height: 1920, format: :jpeg)
+        expect(info.fit_within(400, 400)).to eq([225, 400])
+      end
+
+      it 'does not upscale when the image is smaller than the box' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 100, height: 200, format: :png)
+        expect(info.fit_within(1000, 1000)).to eq([100, 200])
+      end
+
+      it 'returns exact dimensions when image matches box exactly' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 800, height: 600, format: :png)
+        expect(info.fit_within(800, 600)).to eq([800, 600])
+      end
+
+      it 'respects the tighter dimension when box is non-square' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 2000, height: 1000, format: :jpeg)
+        expect(info.fit_within(500, 500)).to eq([500, 250])
+      end
+
+      it 'handles square images' do
+        info = Philiprehberger::ImageSize::ImageInfo.new(width: 1000, height: 1000, format: :png)
+        expect(info.fit_within(500, 500)).to eq([500, 500])
+      end
+    end
   end
 
   describe 'ImageInfo#megapixels' do

@@ -135,6 +135,14 @@ info.megapixels    # => 2.1
 info.rotated?      # => false
 ```
 
+### Fit Within a Bounding Box
+
+```ruby
+info = Philiprehberger::ImageSize.of("photo.png") # 1920x1080
+info.fit_within(400, 400)  # => [400, 225]   # scaled down, aspect preserved
+info.fit_within(3000, 3000) # => [1920, 1080] # no upscale
+```
+
 ## API
 
 ### `Philiprehberger::ImageSize`
@@ -165,6 +173,7 @@ info.rotated?      # => false
 | `#dpi` | DPI as `{ x: Float, y: Float }` hash, or nil |
 | `#color_depth` | Bits per pixel (PNG, BMP, JPEG), or nil |
 | `#rotated?` | Whether EXIF orientation indicates 90/270 rotation |
+| `#fit_within(max_w, max_h)` | Returns `[w, h]` scaled to fit inside a bounding box (preserves aspect ratio, never upscales) |
 | `#to_a` | Returns `[width, height]` |
 | `#to_h` | Returns hash with all attributes |
 | `#to_s` | Returns `"FORMAT WxH"` string |
